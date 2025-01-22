@@ -1,43 +1,45 @@
-import sys
 import os
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QTabWidget, QWidget,
-    QVBoxLayout, QPushButton, QLabel, QFileDialog, QMessageBox, QLineEdit, QComboBox
+import sys
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                            QTabWidget, QPushButton, QLabel, QFileDialog,
+                            QMessageBox, QLineEdit)
+from backend.api import (
+    hideTextInLSB,
+    mixTwoImagesMagic,
+    getTextFromLSB,
+    mixColorChannels,
+    separateColorChannels,
+    hideTextByMakingImageLarger,
+    getTextFromLargeImage
 )
-from PyQt5.QtCore import Qt
 
-
-class Tab1(QWidget):
-    """First Tab: Hide Text in a File"""
+class LSBTab(QWidget):
     def __init__(self):
         super().__init__()
-
-        # Layout for the tab
         layout = QVBoxLayout()
 
-        # Input field for the message
-        self.message_field = QLineEdit(self)
-        self.message_field.setPlaceholderText("Enter the text message to hide...")
+        # Message input
+        self.message_field = QLineEdit()
+        self.message_field.setPlaceholderText("Enter message to hide")
 
         # File selection button
-        self.file_button = QPushButton("Select File to Hide Text In", self)
+        self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
         self.file_button.clicked.connect(self.select_file)
 
-        # Start hiding process button
-        self.start_button = QPushButton("Start Hiding Process", self)
+        # Process button
+        self.start_button = QPushButton("Hide Message")
         self.start_button.setFixedSize(200, 30)
         self.start_button.clicked.connect(self.start_hiding_process)
 
-        # Download file button
-        self.download_button = QPushButton("Download Finished File", self)
+        # Download button
+        self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
         # Status label
-        self.status_label = QLabel("Status will be displayed here.", self)
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label = QLabel("Select a file and enter message")
 
         # Add widgets to layout
         layout.addWidget(self.message_field)
@@ -45,8 +47,6 @@ class Tab1(QWidget):
         layout.addWidget(self.start_button)
         layout.addWidget(self.download_button)
         layout.addWidget(self.status_label)
-
-        # Set layout
         self.setLayout(layout)
 
         # Internal attributes
@@ -54,344 +54,497 @@ class Tab1(QWidget):
         self.finished_file_path = None
 
     def select_file(self):
-        """Select the input file."""
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select File", "", "All Files (*)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "", 
+                                                 "Images (*.png *.jpg)", options=options)
         if file_path:
             self.file_path = file_path
-            self.status_label.setText(f"Selected file: {file_path}")
+            self.status_label.setText(f"Selected: {file_path}")
 
     def start_hiding_process(self):
-        """Start hiding the text in the selected file."""
         if not self.file_path or not self.message_field.text():
-            QMessageBox.warning(self, "Missing Information", "Please provide both a file and a message.")
+            QMessageBox.warning(self, "Error", "Please provide image and message")
             return
 
-        # Simulating a successful process (backend logic will replace this)
-        self.finished_file_path = os.path.join(os.path.dirname(self.file_path), "finished_file.txt")
-        self.status_label.setText(f"Process completed successfully. Finished file: {self.finished_file_path}")
-        self.download_button.setEnabled(True)
+        try:
+            self.finished_file_path = hideTextInLSB(self.file_path, 
+                                                   self.message_field.text())
+            self.status_label.setText("Process completed")
+            self.download_button.setEnabled(True)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
 
     def download_file(self):
-        """Save/download the finished file."""
         if not self.finished_file_path:
-            QMessageBox.warning(self, "No Finished File", "There is no finished file to download.")
+            QMessageBox.warning(self, "Error", "No processed file available")
             return
 
-        options = QFileDialog.Options()
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Finished File", "", "All Files (*)", options=options)
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "", 
+                                                 "Images (*.png *.jpg)")
         if save_path:
-            # Simulating saving the file (backend logic will provide actual file content)
-            with open(self.finished_file_path, "w") as f:
-                f.write("This is a simulated finished file.")
-            self.status_label.setText(f"File saved to: {save_path}")
+            try:
+                os.replace(self.finished_file_path, save_path)
+                self.status_label.setText(f"Saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
 
-
-class Tab2(QWidget):
-    """Second Tab: Hide a File in Another File"""
+class RGBTab(QWidget):
     def __init__(self):
         super().__init__()
-
-        # Layout for the tab
         layout = QVBoxLayout()
 
-        # File selection button for the file to be hidden
-        self.file_to_hide_button = QPushButton("Select File to Hide", self)
-        self.file_to_hide_button.setFixedSize(200, 30)
-        self.file_to_hide_button.clicked.connect(self.select_file_to_hide)
+        # File selection buttons
+        self.red_button = QPushButton("Select Red Channel")
+        self.green_button = QPushButton("Select Green Channel")
+        self.blue_button = QPushButton("Select Blue Channel")
 
-        # File selection button for the container file
-        self.container_file_button = QPushButton("Select Container File", self)
-        self.container_file_button.setFixedSize(200, 30)
-        self.container_file_button.clicked.connect(self.select_container_file)
+        for btn in [self.red_button, self.green_button, self.blue_button]:
+            btn.setFixedSize(200, 30)
 
-        # Start hiding process button
-        self.start_button = QPushButton("Start Hiding Process", self)
+        self.red_button.clicked.connect(lambda: self.select_file('red'))
+        self.green_button.clicked.connect(lambda: self.select_file('green'))
+        self.blue_button.clicked.connect(lambda: self.select_file('blue'))
+
+        # Process button
+        self.start_button = QPushButton("Combine Channels")
         self.start_button.setFixedSize(200, 30)
-        self.start_button.clicked.connect(self.start_hiding_process)
+        self.start_button.clicked.connect(self.start_rgb_process)
 
-        # Download file button
-        self.download_button = QPushButton("Download Finished File", self)
+        # Download button
+        self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
         # Status label
-        self.status_label = QLabel("Status will be displayed here.", self)
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label = QLabel("Select RGB channel images")
 
         # Add widgets to layout
-        layout.addWidget(self.file_to_hide_button)
-        layout.addWidget(self.container_file_button)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.download_button)
-        layout.addWidget(self.status_label)
-
-        # Set layout
+        for widget in [self.red_button, self.green_button, self.blue_button,
+                      self.start_button, self.download_button, self.status_label]:
+            layout.addWidget(widget)
         self.setLayout(layout)
 
         # Internal attributes
-        self.file_to_hide_path = None
-        self.container_file_path = None
+        self.channels = {'red': None, 'green': None, 'blue': None}
         self.finished_file_path = None
 
-    def select_file_to_hide(self):
-        """Select the file to be hidden."""
+    def select_file(self, channel):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select File to Hide", "", "All Files (*)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, f"Select {channel.title()} Channel", 
+                                                 "", "Images (*.png *.jpg)", options=options)
         if file_path:
-            self.file_to_hide_path = file_path
-            self.status_label.setText(f"Selected file to hide: {file_path}")
+            self.channels[channel] = file_path
+            self.status_label.setText(f"Selected {channel} channel: {file_path}")
 
-    def select_container_file(self):
-        """Select the container file."""
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select Container File", "", "All Files (*)", options=options)
-        if file_path:
-            self.container_file_path = file_path
-            self.status_label.setText(f"Selected container file: {file_path}")
-
-    def start_hiding_process(self):
-        """Start hiding the file in the container file."""
-        if not self.file_to_hide_path or not self.container_file_path:
-            QMessageBox.warning(self, "Missing Information", "Please select both files.")
+    def start_rgb_process(self):
+        if not all(self.channels.values()):
+            QMessageBox.warning(self, "Error", "Please select all channels")
             return
 
-        # Simulating a successful process (backend logic will replace this)
-        self.finished_file_path = os.path.join(os.path.dirname(self.container_file_path), "hidden_file_output.txt")
-        self.status_label.setText(f"Process completed successfully. Finished file: {self.finished_file_path}")
-        self.download_button.setEnabled(True)
+        try:
+            self.finished_file_path = mixColorChannels(
+                self.channels['red'],
+                self.channels['green'],
+                self.channels['blue']
+            )
+            self.status_label.setText("Channels combined successfully")
+            self.download_button.setEnabled(True)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
 
     def download_file(self):
-        """Save/download the finished file."""
         if not self.finished_file_path:
-            QMessageBox.warning(self, "No Finished File", "There is no finished file to download.")
+            QMessageBox.warning(self, "Error", "No processed file available")
             return
 
-        options = QFileDialog.Options()
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Finished File", "", "All Files (*)", options=options)
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "", 
+                                                 "Images (*.png *.jpg)")
         if save_path:
-            # Simulating saving the file (backend logic will provide actual file content)
-            with open(self.finished_file_path, "w") as f:
-                f.write("This is a simulated finished file with hidden content.")
-            self.status_label.setText(f"File saved to: {save_path}")
-
+            try:
+                os.replace(self.finished_file_path, save_path)
+                self.status_label.setText(f"Saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
 
 class MagicTab(QWidget):
-    """Third Tab: Magic - Combine Two Images"""
     def __init__(self):
         super().__init__()
-
-        # Layout for the tab
         layout = QVBoxLayout()
 
-        # File selection for image 1
-        self.image1_button = QPushButton("Upload First Image", self)
-        self.image1_button.setFixedSize(200, 30)
-        self.image1_button.clicked.connect(self.upload_image1)
+        # File selection buttons
+        self.image1_button = QPushButton("Select First Image")
+        self.image2_button = QPushButton("Select Second Image")
 
-        # File selection for image 2
-        self.image2_button = QPushButton("Upload Second Image", self)
-        self.image2_button.setFixedSize(200, 30)
-        self.image2_button.clicked.connect(self.upload_image2)
+        for btn in [self.image1_button, self.image2_button]:
+            btn.setFixedSize(200, 30)
 
-        # Start process button
-        self.start_button = QPushButton("Start Magic Process", self)
+        self.image1_button.clicked.connect(lambda: self.select_file(1))
+        self.image2_button.clicked.connect(lambda: self.select_file(2))
+
+        # Process button
+        self.start_button = QPushButton("Combine Images")
         self.start_button.setFixedSize(200, 30)
         self.start_button.clicked.connect(self.start_magic_process)
 
         # Download button
-        self.download_button = QPushButton("Download Final Product", self)
+        self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
         # Status label
-        self.status_label = QLabel("Status will be displayed here.", self)
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label = QLabel("Select two images to combine")
 
         # Add widgets to layout
-        layout.addWidget(self.image1_button)
-        layout.addWidget(self.image2_button)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.download_button)
-        layout.addWidget(self.status_label)
-
-        # Set layout
+        for widget in [self.image1_button, self.image2_button,
+                      self.start_button, self.download_button, self.status_label]:
+            layout.addWidget(widget)
         self.setLayout(layout)
 
         # Internal attributes
-        self.image1_path = None
-        self.image2_path = None
-        self.result_path = None
+        self.images = {1: None, 2: None}
+        self.finished_file_path = None
 
-    def upload_image1(self):
-        """Upload the first image."""
+    def select_file(self, image_num):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Upload First Image", "", "Images (*.png *.jpg *.jpeg)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, f"Select Image {image_num}", 
+                                                 "", "Images (*.png *.jpg)", options=options)
         if file_path:
-            self.image1_path = file_path
-            self.status_label.setText(f"First image selected: {file_path}")
-
-    def upload_image2(self):
-        """Upload the second image."""
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Upload Second Image", "", "Images (*.png *.jpg *.jpeg)", options=options)
-        if file_path:
-            self.image2_path = file_path
-            self.status_label.setText(f"Second image selected: {file_path}")
+            self.images[image_num] = file_path
+            self.status_label.setText(f"Selected image {image_num}: {file_path}")
 
     def start_magic_process(self):
-        """Start the magic process."""
-        if not self.image1_path or not self.image2_path:
-            QMessageBox.warning(self, "Missing Information", "Please upload both images.")
+        if not all(self.images.values()):
+            QMessageBox.warning(self, "Error", "Please select both images")
             return
 
-        # Simulate the process (backend logic will replace this)
-        self.result_path = os.path.join(os.path.dirname(self.image1_path), "magic_result.png")
-        self.status_label.setText(f"Magic process completed. Result file: {self.result_path}")
-        self.download_button.setEnabled(True)
+        try:
+            self.finished_file_path = mixTwoImagesMagic(
+                self.images[1],
+                self.images[2]
+            )
+            self.status_label.setText("Images combined successfully")
+            self.download_button.setEnabled(True)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
 
     def download_file(self):
-        """Save/download the final product."""
-        if not self.result_path:
-            QMessageBox.warning(self, "No Final Product", "There is no final product to download.")
+        if not self.finished_file_path:
+            QMessageBox.warning(self, "Error", "No processed file available")
             return
 
-        options = QFileDialog.Options()
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Final Product", "", "Images (*.png *.jpg *.jpeg)", options=options)
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "", 
+                                                 "Images (*.png *.jpg)")
         if save_path:
-            # Simulate saving the file (backend logic will provide actual file content)
-            with open(self.result_path, "w") as f:
-                f.write("This is a simulated magic result.")
-            self.status_label.setText(f"File saved to: {save_path}")
+            try:
+                os.replace(self.finished_file_path, save_path)
+                self.status_label.setText(f"Saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
 
-class CheckSteganographyTab(QWidget):
-    """Fourth Tab: Check if Steganography is Applied"""
+class ExtractLSBTab(QWidget):
     def __init__(self):
         super().__init__()
-
-        # Layout for the tab
         layout = QVBoxLayout()
 
         # File selection button
-        self.file_button = QPushButton("Upload File", self)
+        self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
-        self.file_button.clicked.connect(self.upload_file)
+        self.file_button.clicked.connect(self.select_file)
 
-        # Dropdown to select expected content
-        self.dropdown = QComboBox(self)
-        self.dropdown.addItems(["Select Expected Content", "Text", "File"])
-        self.dropdown.setFixedSize(200, 30)
+        # Bit depth input
+        self.bit_depth_field = QLineEdit()
+        self.bit_depth_field.setPlaceholderText("Enter bit depth (default is 1)")
 
-        # Check steganography button
-        self.check_button = QPushButton("Check for Steganography", self)
-        self.check_button.setFixedSize(200, 30)
-        self.check_button.clicked.connect(self.check_steganography)
+        # Process button
+        self.start_button = QPushButton("Extract Hidden Text")
+        self.start_button.setFixedSize(200, 30)
+        self.start_button.clicked.connect(self.start_extraction)
 
         # Status label
-        self.status_label = QLabel("Status will be displayed here.", self)
-        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label = QLabel("Select an image file to extract hidden text.")
 
-        # Download button (enabled only if a file is found)
-        self.download_button = QPushButton("Download Hidden File", self)
-        self.download_button.setFixedSize(200, 30)
-        self.download_button.setEnabled(False)
-        self.download_button.clicked.connect(self.download_file)
+        # Result display
+        self.result_label = QLabel("")
+        self.result_label.setWordWrap(True)
 
         # Add widgets to layout
         layout.addWidget(self.file_button)
-        layout.addWidget(self.dropdown)
-        layout.addWidget(self.check_button)
-        layout.addWidget(self.download_button)
+        layout.addWidget(self.bit_depth_field)
+        layout.addWidget(self.start_button)
         layout.addWidget(self.status_label)
-
-        # Set layout
+        layout.addWidget(self.result_label)
         self.setLayout(layout)
 
         # Internal attributes
         self.file_path = None
-        self.hidden_file_path = None
-        self.extracted_text = None
 
-    def upload_file(self):
-        """Upload the file to be checked."""
+    def select_file(self):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Upload File", "", "All Files (*)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Image File", "", "Images (*.png *.jpg)", options=options)
         if file_path:
             self.file_path = file_path
             self.status_label.setText(f"Selected file: {file_path}")
 
-    def check_steganography(self):
-        """Check for steganography in the uploaded file."""
+    def start_extraction(self):
         if not self.file_path:
-            QMessageBox.warning(self, "Missing File", "Please upload a file to check.")
+            QMessageBox.warning(self, "Error", "Please select an image file.")
             return
 
-        if self.dropdown.currentText() == "Select Expected Content":
-            QMessageBox.warning(self, "Missing Selection", "Please select what you expect to find (Text or File).")
+        try:
+            # Get bit depth from the input field or use the default value
+            bit_depth = int(self.bit_depth_field.text()) if self.bit_depth_field.text().isdigit() else 1
+
+            # Call the API to extract text
+            extracted_text = getTextFromLSB(self.file_path, bitDepth=bit_depth)
+            if extracted_text:
+                self.status_label.setText("Text extracted successfully!")
+                self.result_label.setText(f"Extracted Text: {extracted_text}")
+            else:
+                self.status_label.setText("No hidden text found.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+class SeparateChannelsTab(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        # File selection button
+        self.file_button = QPushButton("Select RGB Image")
+        self.file_button.setFixedSize(200, 30)
+        self.file_button.clicked.connect(self.select_file)
+
+        # Process button
+        self.start_button = QPushButton("Separate Channels")
+        self.start_button.setFixedSize(200, 30)
+        self.start_button.clicked.connect(self.start_separation)
+
+        # Download buttons for channels
+        self.download_red_button = QPushButton("Download Red Channel")
+        self.download_green_button = QPushButton("Download Green Channel")
+        self.download_blue_button = QPushButton("Download Blue Channel")
+        for button in [self.download_red_button, self.download_green_button, self.download_blue_button]:
+            button.setFixedSize(200, 30)
+            button.setEnabled(False)
+
+        self.download_red_button.clicked.connect(lambda: self.download_file("red"))
+        self.download_green_button.clicked.connect(lambda: self.download_file("green"))
+        self.download_blue_button.clicked.connect(lambda: self.download_file("blue"))
+
+        # Status label
+        self.status_label = QLabel("Select an RGB image to separate into channels.")
+
+        # Add widgets to layout
+        layout.addWidget(self.file_button)
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.download_red_button)
+        layout.addWidget(self.download_green_button)
+        layout.addWidget(self.download_blue_button)
+        layout.addWidget(self.status_label)
+        self.setLayout(layout)
+
+        # Internal attributes
+        self.file_path = None
+        self.channel_paths = {"red": None, "green": None, "blue": None}
+
+    def select_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select RGB Image", "", "Images (*.png *.jpg)", options=options)
+        if file_path:
+            self.file_path = file_path
+            self.status_label.setText(f"Selected file: {file_path}")
+
+    def start_separation(self):
+        if not self.file_path:
+            QMessageBox.warning(self, "Error", "Please select an RGB image.")
             return
 
-        # Simulated backend logic
-        expected_content = self.dropdown.currentText()
+        try:
+            # Call the API to separate color channels
+            red_path, green_path, blue_path = separateColorChannels(self.file_path)
+            self.channel_paths["red"] = red_path
+            self.channel_paths["green"] = green_path
+            self.channel_paths["blue"] = blue_path
 
-        # Simulate result for "Text"
-        if expected_content == "Text":
-            # Simulate detecting hidden text
-            self.extracted_text = "This is hidden steganographic text."
-            self.hidden_file_path = None
-            self.status_label.setText("Hidden text found! Displaying content below:")
-            QMessageBox.information(self, "Hidden Content Found", f"Text Content: {self.extracted_text}")
+            self.status_label.setText("Channels separated successfully!")
+            for button in [self.download_red_button, self.download_green_button, self.download_blue_button]:
+                button.setEnabled(True)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
 
-        # Simulate result for "File"
-        elif expected_content == "File":
-            # Simulate detecting a hidden file
-            self.extracted_text = None
-            self.hidden_file_path = os.path.join(os.path.dirname(self.file_path), "hidden_file.txt")
-            self.status_label.setText("Hidden file found! You can now download it.")
+    def download_file(self, channel):
+        if not self.channel_paths[channel]:
+            QMessageBox.warning(self, "Error", f"No {channel} channel file available.")
+            return
+
+        save_path, _ = QFileDialog.getSaveFileName(self, f"Save {channel.title()} Channel", "", "Images (*.png *.jpg)")
+        if save_path:
+            try:
+                os.replace(self.channel_paths[channel], save_path)
+                self.status_label.setText(f"{channel.title()} channel saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+
+
+class HideTextInLargerImageTab(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        # File selection button
+        self.file_button = QPushButton("Select Image File")
+        self.file_button.setFixedSize(200, 30)
+        self.file_button.clicked.connect(self.select_file)
+
+        # Text input field
+        self.text_field = QLineEdit()
+        self.text_field.setPlaceholderText("Enter the text to hide")
+
+        # Process button
+        self.start_button = QPushButton("Hide Text in Larger Image")
+        self.start_button.setFixedSize(200, 30)
+        self.start_button.clicked.connect(self.start_hiding_process)
+
+        # Download button
+        self.download_button = QPushButton("Download Modified Image")
+        self.download_button.setFixedSize(200, 30)
+        self.download_button.setEnabled(False)
+        self.download_button.clicked.connect(self.download_file)
+
+        # Status label
+        self.status_label = QLabel("Select an image file and enter text to hide.")
+
+        # Add widgets to layout
+        layout.addWidget(self.file_button)
+        layout.addWidget(self.text_field)
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.download_button)
+        layout.addWidget(self.status_label)
+        self.setLayout(layout)
+
+        # Internal attributes
+        self.file_path = None
+        self.finished_file_path = None
+
+    def select_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Image File", "", "Images (*.png *.jpg)", options=options)
+        if file_path:
+            self.file_path = file_path
+            self.status_label.setText(f"Selected file: {file_path}")
+
+    def start_hiding_process(self):
+        if not self.file_path or not self.text_field.text():
+            QMessageBox.warning(self, "Error", "Please provide an image and text to hide.")
+            return
+
+        try:
+            # Call the API to hide text by making the image larger
+            self.finished_file_path = hideTextByMakingImageLarger(self.file_path, self.text_field.text())
+            self.status_label.setText("Text hidden successfully in the enlarged image!")
             self.download_button.setEnabled(True)
-
-        # If nothing is found
-        else:
-            self.extracted_text = None
-            self.hidden_file_path = None
-            self.status_label.setText("No hidden content found.")
-            QMessageBox.information(self, "No Content Found", "The file does not contain any hidden content.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
 
     def download_file(self):
-        """Save/download the hidden file."""
-        if not self.hidden_file_path:
-            QMessageBox.warning(self, "No File to Download", "No hidden file was found.")
+        if not self.finished_file_path:
+            QMessageBox.warning(self, "Error", "No processed file available.")
             return
 
-        options = QFileDialog.Options()
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Hidden File", "", "All Files (*)", options=options)
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Modified Image", "", "Images (*.png *.jpg)")
         if save_path:
-            # Simulate saving the file (backend logic will provide actual file content)
-            with open(self.hidden_file_path, "w") as f:
-                f.write("This is the hidden file content.")  # Simulated content
-            self.status_label.setText(f"File saved to: {save_path}")
+            try:
+                os.replace(self.finished_file_path, save_path)
+                self.status_label.setText(f"Modified image saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+
+
+class ExtractTextFromLargeImageTab(QWidget):
+    def __init__(self):
+        super().__init__()
+        layout = QVBoxLayout()
+
+        # File selection button
+        self.file_button = QPushButton("Select Enlarged Image")
+        self.file_button.setFixedSize(200, 30)
+        self.file_button.clicked.connect(self.select_file)
+
+        # Process button
+        self.start_button = QPushButton("Extract Hidden Text")
+        self.start_button.setFixedSize(200, 30)
+        self.start_button.clicked.connect(self.start_extraction)
+
+        # Status label
+        self.status_label = QLabel("Select an enlarged image to extract hidden text.")
+
+        # Result display
+        self.result_label = QLabel("")
+        self.result_label.setWordWrap(True)
+
+        # Add widgets to layout
+        layout.addWidget(self.file_button)
+        layout.addWidget(self.start_button)
+        layout.addWidget(self.status_label)
+        layout.addWidget(self.result_label)
+        self.setLayout(layout)
+
+        # Internal attributes
+        self.file_path = None
+
+    def select_file(self):
+        options = QFileDialog.Options()
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Enlarged Image", "", "Images (*.png *.jpg)", options=options)
+        if file_path:
+            self.file_path = file_path
+            self.status_label.setText(f"Selected file: {file_path}")
+
+    def start_extraction(self):
+        if not self.file_path:
+            QMessageBox.warning(self, "Error", "Please select an enlarged image.")
+            return
+
+        try:
+            # Call the API to extract hidden text
+            extracted_text = getTextFromLargeImage(self.file_path)
+            if extracted_text:
+                self.status_label.setText("Text extracted successfully!")
+                self.result_label.setText(f"Extracted Text: {extracted_text}")
+            else:
+                self.status_label.setText("No hidden text found.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+
+
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Image Steganography Tool")
+        self.setGeometry(100, 100, 800, 600)
 
-        self.setWindowTitle("Steganography Application")
-        self.setGeometry(100, 100, 600, 400)
+        # Create tab widget
+        tabs = QTabWidget()
+        tabs.addTab(LSBTab(), "LSB Steganography")
+        tabs.addTab(RGBTab(), "RGB Channels")
+        tabs.addTab(MagicTab(), "Magic Combination")
+        tabs.addTab(ExtractLSBTab(), "LSB text extraction")
+        tabs.addTab(SeparateChannelsTab(), "Separate Channels")
+        tabs.addTab(HideTextInLargerImageTab(), "Hide Text in Larger Image")
+        tabs.addTab(ExtractTextFromLargeImageTab(), "Extract Text from Large Image")
 
-        # Create Tab Widget
-        self.tabs = QTabWidget()
-        self.setCentralWidget(self.tabs)
-
-        # Add Tabs
-        self.tabs.addTab(Tab1(), "Hide Text")
-        self.tabs.addTab(Tab2(), "Hide File")
-        self.tabs.addTab(MagicTab(), "Magic")
-        self.tabs.addTab(CheckSteganographyTab(), "Check Steganography")
+        self.setCentralWidget(tabs)
 
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
-    main_window = MainWindow()
-    main_window.show()
+    window = MainWindow()
+    window.show()
     sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
