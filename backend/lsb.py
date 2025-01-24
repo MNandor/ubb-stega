@@ -64,7 +64,7 @@ def putTextIntoLSB(fileName, text, bitDepth=1, outputFile = 'res.png'):
 	return 'output-placeholder.png'
 
 
-def getTextFromLSB(fileName, bitDepth=1):
+def getTheTextFromLSB(fileName, bitDepth=1):
 	with open(fileName, 'rb') as ifs:
 		thePNG = png.Reader(file=ifs).read()
 

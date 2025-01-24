@@ -7,7 +7,7 @@ import string
 # Note that all files, by default, are in the same folder as the code being executed
 
 from magic import magic
-from lsb import putTextIntoLSB, getTextFromLSB
+from lsb import putTextIntoLSB, getTheTextFromLSB
 
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
@@ -57,7 +57,7 @@ def getTextFromLSB(fileName: string, bitDepth: int=1):
 	'''
 
 
-	extractedText  = getTextFromLSB(fileName, bitDepth)
+	extractedText  = getTheTextFromLSB(fileName, bitDepth)
 
 	return extractedText
 

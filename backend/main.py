@@ -337,34 +337,83 @@ class ExtractLSBTab(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
+        # Description label
+        description_label = QLabel("""
+        <h2>Extract Hidden Text</h2>
+        <p>Extract hidden messages embedded in the Least Significant Bits of an image.<br>
+        Select an image, specify the bit depth, and uncover the hidden text!</p>
+        """)
+        description_label.setWordWrap(True)
+
         # File selection button
         self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
+        self.file_button.setToolTip("Click to choose an image file for extracting hidden text")
         self.file_button.clicked.connect(self.select_file)
 
         # Bit depth input
         self.bit_depth_field = QLineEdit()
         self.bit_depth_field.setPlaceholderText("Enter bit depth (default is 1)")
+        self.bit_depth_field.setToolTip("Specify the number of Least Significant Bits used for embedding the text")
 
         # Process button
         self.start_button = QPushButton("Extract Hidden Text")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Start extracting hidden text from the selected image")
         self.start_button.clicked.connect(self.start_extraction)
 
         # Status label
         self.status_label = QLabel("Select an image file to extract hidden text.")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
 
         # Result display
         self.result_label = QLabel("")
         self.result_label.setWordWrap(True)
+        self.result_label.setAlignment(Qt.AlignCenter)
+        self.result_label.setStyleSheet("border: 1px solid #ccc; padding: 10px; border-radius: 5px; background-color: #f9f9f9;")
 
         # Add widgets to layout
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.bit_depth_field)
-        layout.addWidget(self.start_button)
+        layout.addWidget(description_label)
+        layout.addSpacing(10)
+        layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(5)
+        layout.addWidget(self.bit_depth_field, alignment=Qt.AlignCenter)
+        layout.addSpacing(5)
+        layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(10)
         layout.addWidget(self.status_label)
+        layout.addSpacing(10)
         layout.addWidget(self.result_label)
         self.setLayout(layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+        """)
 
         # Internal attributes
         self.file_path = None
@@ -389,11 +438,13 @@ class ExtractLSBTab(QWidget):
             extracted_text = getTextFromLSB(self.file_path, bitDepth=bit_depth)
             if extracted_text:
                 self.status_label.setText("Text extracted successfully!")
-                self.result_label.setText(f"Extracted Text: {extracted_text}")
+                self.result_label.setText(f"<b>Extracted Text:</b><br>{extracted_text}")
             else:
                 self.status_label.setText("No hidden text found.")
+                self.result_label.setText("No hidden text found in the image.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
 
 class SeparateChannelsTab(QWidget):
     def __init__(self):
