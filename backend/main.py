@@ -747,45 +747,155 @@ class ExtractLSBTab(QWidget):
 class SeparateChannelsTab(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
+        description_label = QLabel("""
+        <h2>Separate RGB Channels</h2>
+        <p>Select an RGB image to split it into its Red, Green, and Blue channels.<br>
+        Preview each channel and download them individually after processing.</p>
+        """)
+        description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
 
         # File selection button
         self.file_button = QPushButton("Select RGB Image")
         self.file_button.setFixedSize(200, 30)
+        self.file_button.setToolTip("Click to select an RGB image")
+        self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
 
         # Process button
         self.start_button = QPushButton("Separate Channels")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Start separating the image into RGB channels")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_separation)
 
-        # Download buttons for channels
-        self.download_red_button = QPushButton("Download Red Channel")
-        self.download_green_button = QPushButton("Download Green Channel")
-        self.download_blue_button = QPushButton("Download Blue Channel")
-        for button in [self.download_red_button, self.download_green_button, self.download_blue_button]:
+        # Check channel buttons
+        self.check_red_button = QPushButton("Check Red Channel")
+        self.check_green_button = QPushButton("Check Green Channel")
+        self.check_blue_button = QPushButton("Check Blue Channel")
+
+        for button in [self.check_red_button, self.check_green_button, self.check_blue_button]:
             button.setFixedSize(200, 30)
+            button.setStyleSheet("padding: 8px; font-size: 14px;")
+            button.setToolTip("Preview the selected channel")
             button.setEnabled(False)
 
-        self.download_red_button.clicked.connect(lambda: self.download_file("red"))
-        self.download_green_button.clicked.connect(lambda: self.download_file("green"))
-        self.download_blue_button.clicked.connect(lambda: self.download_file("blue"))
+        self.check_red_button.clicked.connect(lambda: self.preview_channel("red"))
+        self.check_green_button.clicked.connect(lambda: self.preview_channel("green"))
+        self.check_blue_button.clicked.connect(lambda: self.preview_channel("blue"))
+
+        # Image box for preview
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white; border: 1px solid #ccc;")
+        self.image_box.setFixedSize(550, 450)
+
+        # Centering layout for image preview
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(480, 380)
+        self.image_label.hide()
+
+        # Add the image label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
+        # Dynamic download button
+        self.download_channel_button = QPushButton("Download Channel")
+        self.download_channel_button.setFixedSize(200, 30)
+        self.download_channel_button.setStyleSheet("padding: 8px; font-size: 14px;")
+        self.download_channel_button.setToolTip("Download the currently displayed channel")
+        self.download_channel_button.setEnabled(False)
+        self.download_channel_button.clicked.connect(self.download_selected_channel)
 
         # Status label
         self.status_label = QLabel("Select an RGB image to separate into channels.")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Add widgets to layout
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.download_red_button)
-        layout.addWidget(self.download_green_button)
-        layout.addWidget(self.download_blue_button)
-        layout.addWidget(self.status_label)
-        self.setLayout(layout)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.check_red_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.check_green_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.check_blue_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.download_channel_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
+
+        # Set the scroll area's widget to the scroll content
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                background-color: white;
+                color: black;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+        """)
 
         # Internal attributes
         self.file_path = None
         self.channel_paths = {"red": None, "green": None, "blue": None}
+        self.current_channel = None  # Track the currently selected channel
 
     def select_file(self):
         options = QFileDialog.Options()
@@ -807,10 +917,29 @@ class SeparateChannelsTab(QWidget):
             self.channel_paths["blue"] = blue_path
 
             self.status_label.setText("Channels separated successfully!")
-            for button in [self.download_red_button, self.download_green_button, self.download_blue_button]:
+            for button in [self.check_red_button, self.check_green_button, self.check_blue_button]:
                 button.setEnabled(True)
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
+    def preview_channel(self, channel):
+        """Display the selected channel in the image box."""
+        if self.channel_paths[channel]:
+            self.image_label.setPixmap(QPixmap(self.channel_paths[channel]))
+            self.image_label.show()
+            self.download_channel_button.setText(f"Download {channel.capitalize()} Channel")
+            self.download_channel_button.setEnabled(True)
+            self.current_channel = channel
+            self.status_label.setText(f"Previewing {channel.capitalize()} Channel.")
+        else:
+            self.status_label.setText(f"{channel.capitalize()} channel not available.")
+
+    def download_selected_channel(self):
+        """Download the currently displayed channel."""
+        if self.current_channel and self.channel_paths[self.current_channel]:
+            self.download_file(self.current_channel)
+        else:
+            self.status_label.setText("No channel selected for download.")
 
     def download_file(self, channel):
         if not self.channel_paths[channel]:
@@ -824,6 +953,7 @@ class SeparateChannelsTab(QWidget):
                 self.status_label.setText(f"{channel.title()} channel saved to: {save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
+
 
 
 class HideTextInLargerImageTab(QWidget):
