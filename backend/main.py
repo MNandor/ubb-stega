@@ -218,7 +218,6 @@ class LSBTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
 
-
 class RGBTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -602,7 +601,6 @@ class MagicTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
 
-
 class ExtractLSBTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -742,7 +740,6 @@ class ExtractLSBTab(QWidget):
                 self.result_label.setText("No hidden text found in the image.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
-
 
 class SeparateChannelsTab(QWidget):
     def __init__(self):
@@ -954,43 +951,140 @@ class SeparateChannelsTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
 
-
-
 class HideTextInLargerImageTab(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
+        description_label = QLabel("""
+        <h2>Hide Text in Larger Image</h2>
+        <p>Select an image file, enter the text you want to hide, and save the modified image.</p>
+        """)
+        description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
 
         # File selection button
         self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
+        self.file_button.setToolTip("Click to select an image file")
+        self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
 
         # Text input field
         self.text_field = QLineEdit()
         self.text_field.setPlaceholderText("Enter the text to hide")
+        self.text_field.setToolTip("Type the secret text you want to hide in the image")
+        self.text_field.setFixedSize(400, 40)  # Larger and wider input field
+        self.text_field.setStyleSheet("padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px;")
 
         # Process button
         self.start_button = QPushButton("Hide Text in Larger Image")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Start hiding text in the selected image")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_hiding_process)
 
         # Download button
         self.download_button = QPushButton("Download Modified Image")
         self.download_button.setFixedSize(200, 30)
+        self.download_button.setToolTip("Download the image with hidden text")
+        self.download_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.download_button.setEnabled(False)
         self.download_button.clicked.connect(self.download_file)
 
+        # Image box for preview with border
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white; border: 2px solid #ccc; border-radius: 5px;")
+        self.image_box.setFixedSize(550, 450)
+
+        # Centering layout for image preview
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(480, 380)
+        self.image_label.hide()
+
+        # Add the image label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
         # Status label
         self.status_label = QLabel("Select an image file and enter text to hide.")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Add widgets to layout
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.text_field)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.download_button)
-        layout.addWidget(self.status_label)
-        self.setLayout(layout)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.text_field, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
+
+        # Set the scroll area's widget to the scroll content
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                background-color: white;
+                color: black;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+        """)
 
         # Internal attributes
         self.file_path = None
@@ -1011,8 +1105,17 @@ class HideTextInLargerImageTab(QWidget):
         try:
             # Call the API to hide text by making the image larger
             self.finished_file_path = hideTextByMakingImageLarger(self.file_path, self.text_field.text())
-            self.status_label.setText("Text hidden successfully in the enlarged image!")
-            self.download_button.setEnabled(True)
+
+            # Display the processed image in the preview box
+            pixmap = QPixmap(self.finished_file_path)
+            if pixmap.isNull():
+                self.status_label.setText("Error: Unable to load the processed image.")
+            else:
+                self.image_label.setPixmap(pixmap)
+                self.image_label.show()
+                self.status_label.setText("Text hidden successfully in the enlarged image! Preview displayed.")
+                self.download_button.setEnabled(True)
+
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
@@ -1028,6 +1131,7 @@ class HideTextInLargerImageTab(QWidget):
                 self.status_label.setText(f"Modified image saved to: {save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
+
 
 
 class ExtractTextFromLargeImageTab(QWidget):
