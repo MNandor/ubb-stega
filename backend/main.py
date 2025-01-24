@@ -1132,36 +1132,130 @@ class HideTextInLargerImageTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
 
-
-
 class ExtractTextFromLargeImageTab(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+
+        # Scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
+        description_label = QLabel("""
+        <h2>Extract Hidden Text</h2>
+        <p>Select an enlarged image to extract hidden text embedded in it.</p>
+        """)
+        description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
 
         # File selection button
         self.file_button = QPushButton("Select Enlarged Image")
         self.file_button.setFixedSize(200, 30)
+        self.file_button.setToolTip("Click to select an enlarged image")
+        self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
+
+        # Image box for preview
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white; border: 1px solid #ccc;")
+        self.image_box.setFixedSize(500, 400)  # Box size
+
+        # Centering layout for image preview
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(460, 360)  # Slightly smaller than the box
+        self.image_label.hide()
+
+        # Add the image label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
 
         # Process button
         self.start_button = QPushButton("Extract Hidden Text")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Start extracting hidden text from the selected image")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_extraction)
 
         # Status label
         self.status_label = QLabel("Select an enlarged image to extract hidden text.")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
         # Result display
         self.result_label = QLabel("")
         self.result_label.setWordWrap(True)
+        self.result_label.setAlignment(Qt.AlignCenter)
+        self.result_label.setStyleSheet("border: 1px solid #ccc; padding: 12px; border-radius: 5px; background-color: #f9f9f9;")
+        self.result_label.setFixedSize(480, 150)  # Adjusted size for a larger box
 
-        # Add widgets to layout
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.result_label)
-        self.setLayout(layout)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.result_label, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
+
+        # Set scroll content layout
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add scroll area to main layout
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                background-color: white;
+                color: black;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+        """)
 
         # Internal attributes
         self.file_path = None
@@ -1173,6 +1267,11 @@ class ExtractTextFromLargeImageTab(QWidget):
             self.file_path = file_path
             self.status_label.setText(f"Selected file: {file_path}")
 
+            # Display the selected image in the box
+            pixmap = QPixmap(file_path)
+            self.image_label.setPixmap(pixmap)
+            self.image_label.show()
+
     def start_extraction(self):
         if not self.file_path:
             QMessageBox.warning(self, "Error", "Please select an enlarged image.")
@@ -1183,9 +1282,10 @@ class ExtractTextFromLargeImageTab(QWidget):
             extracted_text = getTextFromLargeImage(self.file_path)
             if extracted_text:
                 self.status_label.setText("Text extracted successfully!")
-                self.result_label.setText(f"Extracted Text: {extracted_text}")
+                self.result_label.setText(f"Extracted Text:\n{extracted_text}")
             else:
-                self.status_label.setText("No hidden text found.")
+                self.result_label.setText("No hidden text found.")
+                self.status_label.setText("No hidden text found in the image.")
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
@@ -1213,8 +1313,6 @@ class MainWindow(QMainWindow):
 
         # Optionally make the app start maximized
         # self.showMaximized()  # Uncomment if needed
-
-
 
 def main():
     app = QApplication(sys.argv)
