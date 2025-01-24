@@ -17,7 +17,6 @@ from api import (
     getTextFromLargeImage
 )
 
-
 class LSBTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -604,7 +603,13 @@ class MagicTab(QWidget):
 class ExtractLSBTab(QWidget):
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()
+
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
 
         # Description label
         description_label = QLabel("""
@@ -622,6 +627,27 @@ class ExtractLSBTab(QWidget):
         self.file_button.setToolTip("Click to choose an image file for extracting hidden text")
         self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
+
+        # Image preview box
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white; border: 1px solid #ccc;")
+        self.image_box.setFixedSize(550, 450)
+
+        # Centering layout for image preview
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(480, 380)
+        self.image_label.hide()
+
+        # Add the image label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
 
         # Bit depth input
         self.bit_depth_field = QLineEdit()
@@ -658,21 +684,28 @@ class ExtractLSBTab(QWidget):
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Add widgets to the main layout
-        layout.addWidget(description_label)
-        layout.addSpacing(10)
-        layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(10)
-        layout.addWidget(self.bit_depth_field, alignment=Qt.AlignCenter)
-        layout.addSpacing(10)
-        layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(10)
-        layout.addWidget(self.result_box, alignment=Qt.AlignCenter)
-        layout.addSpacing(10)
-        layout.addWidget(self.status_label)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)  # Add the image preview box
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.bit_depth_field, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.result_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
 
-        # Set the main layout
-        self.setLayout(layout)
+        # Set the scroll area's widget to the scroll content
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        main_layout.addWidget(scroll_area)
+        self.setLayout(main_layout)
 
         # Set overall style
         self.setStyleSheet("""
@@ -720,6 +753,12 @@ class ExtractLSBTab(QWidget):
         if file_path:
             self.file_path = file_path
             self.status_label.setText(f"Selected file: {file_path}")
+
+            # Load and display the selected image in the preview box
+            pixmap = QPixmap(file_path)
+            if not pixmap.isNull():
+                self.image_label.setPixmap(pixmap)
+                self.image_label.show()
 
     def start_extraction(self):
         if not self.file_path:
@@ -1289,30 +1328,99 @@ class ExtractTextFromLargeImageTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Image Steganography Tool")
 
-        # Set the window size to match the one in the image
+        # Set the window size
         self.resize(900, 700)  # Adjust width and height as needed
-        self.setMinimumSize(900, 700)  # Optionally set a minimum size to prevent resizing smaller than this
+        self.setMinimumSize(900, 700)
 
         # Create tab widget
         tabs = QTabWidget()
+        tabs.setTabPosition(QTabWidget.North)  # Set tab position to the top
+        tabs.setTabShape(QTabWidget.Rounded)  # Rounded tabs for a smoother look
+
+        # Add tabs
         tabs.addTab(LSBTab(), "LSB Steganography")
         tabs.addTab(RGBTab(), "RGB Channels")
         tabs.addTab(MagicTab(), "Magic Combination")
-        tabs.addTab(ExtractLSBTab(), "LSB text extraction")
+        tabs.addTab(ExtractLSBTab(), "LSB Text Extraction")
         tabs.addTab(SeparateChannelsTab(), "Separate Channels")
         tabs.addTab(HideTextInLargerImageTab(), "Hide Text in Larger Image")
-        tabs.addTab(ExtractTextFromLargeImageTab(), "Extract Text from Large Image")
+        tabs.addTab(ExtractTextFromLargeImageTab(), "Extract Text Large Image")
 
+        # Style the tabs
+        tabs.setStyleSheet("""
+            QTabWidget::pane { /* The background of the tab widget */
+                border: 1px solid #ccc;
+                background: white;
+            }
+            QTabBar::tab {
+                background: #B0BEC5; /* Neutral grey color */
+                color: black;
+                border: 1px solid #ccc;
+                border-bottom: none;
+                padding: 8px 10px; /* Smaller padding to reduce tab size */
+                font-size: 9px; /* Adjust font size for better text fit */
+                min-width: 80px; /* Smaller minimum width for better fit */
+                max-width: 120px; /* Limit max-width to prevent excessive size */
+                text-align: center; /* Center-align the tab text */
+                border-radius: 5px 5px 0 0; /* Rounded top edges */
+            }
+            QTabBar::tab:selected {
+                background: white;
+                color: black;
+                border-bottom: 2px solid #B0BEC5;
+                font-weight: bold;
+            }
+            QTabBar::tab:hover {
+                background: #90A4AE;
+                color: black;
+            }
+            QTabBar::tab:!selected {
+                margin-top: 2px; /* Add spacing between unselected tabs and the content pane */
+            }
+        """)
+
+        # Button styles
+        button_styles = """
+            QPushButton {
+                background-color: #B0BEC5; /* Neutral grey color */
+                color: black;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                padding: 8px 15px;
+                font-size: 14px; /* Ensure consistent text size */
+            }
+            QPushButton:disabled {
+                background-color: #E0E0E0; /* Light grey for disabled buttons */
+                color: #9E9E9E;
+            }
+            QPushButton:hover {
+                background-color: #90A4AE; /* Slightly darker grey on hover */
+            }
+            QPushButton:pressed {
+                background-color: #78909C; /* Even darker grey when pressed */
+                color: white; /* Optional for contrast */
+            }
+        """
+
+        # Apply button styles globally
+        self.setStyleSheet(f"""
+            QWidget {{
+                font-family: Arial, sans-serif;
+                background-color: white;
+            }}
+            {button_styles}
+        """)
+
+        # Set the tabs as the central widget
         self.setCentralWidget(tabs)
 
         # Optionally make the app start maximized
-        # self.showMaximized()  # Uncomment if needed
+        self.showMaximized()  # Uncomment if needed
 
 def main():
     app = QApplication(sys.argv)
