@@ -224,6 +224,22 @@ class RGBTab(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
+        description_label = QLabel("""
+        <h2>RGB Channel Combination</h2>
+        <p>Select separate images for the Red, Green, and Blue channels,<br>
+        combine them to create a full RGB image, and save the result!</p>
+        """)
+        description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
+
         # File selection buttons
         self.red_button = QPushButton("Select Red Channel")
         self.green_button = QPushButton("Select Green Channel")
@@ -231,6 +247,11 @@ class RGBTab(QWidget):
 
         for btn in [self.red_button, self.green_button, self.blue_button]:
             btn.setFixedSize(200, 30)
+            btn.setStyleSheet("padding: 8px; font-size: 14px;")
+
+        self.red_button.setToolTip("Select an image file for the Red channel")
+        self.green_button.setToolTip("Select an image file for the Green channel")
+        self.blue_button.setToolTip("Select an image file for the Blue channel")
 
         self.red_button.clicked.connect(lambda: self.select_file('red'))
         self.green_button.clicked.connect(lambda: self.select_file('green'))
@@ -239,22 +260,105 @@ class RGBTab(QWidget):
         # Process button
         self.start_button = QPushButton("Combine Channels")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Combine the selected RGB channel images")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_rgb_process)
 
         # Download button
         self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
+        self.download_button.setToolTip("Save the combined RGB image")
+        self.download_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
+        # Image box with centered layout
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white;")
+        self.image_box.setFixedSize(550, 450)  # Adjusted size for a larger box
+
+        # Centering layout for the image inside the box
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(480, 380)  # Slightly smaller than the box
+        self.image_label.hide()
+
+        # Add the image_label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
         # Status label
         self.status_label = QLabel("Select RGB channel images")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Add widgets to layout
-        for widget in [self.red_button, self.green_button, self.blue_button,
-                      self.start_button, self.download_button, self.status_label]:
-            layout.addWidget(widget)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.red_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.green_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.blue_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
+
+        # Set the scroll area's widget to the scroll content
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        layout.addWidget(scroll_area)
         self.setLayout(layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                background-color: white;
+                color: black;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+        """)
 
         # Internal attributes
         self.channels = {'red': None, 'green': None, 'blue': None}
