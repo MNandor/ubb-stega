@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QTabWidget, QPushButton, QLabel, QFileDialog,
-                             QMessageBox, QLineEdit, QHBoxLayout, QFrame, QScrollArea)
+                             QMessageBox, QLineEdit, QFrame, QScrollArea)
 from api import (
     hideTextInLSB,
     mixTwoImagesMagic,
@@ -376,6 +376,7 @@ class RGBTab(QWidget):
             return
 
         try:
+            # Call the function to combine channels
             self.finished_file_path = mixColorChannels(
                 self.channels['red'],
                 self.channels['green'],
@@ -383,6 +384,14 @@ class RGBTab(QWidget):
             )
             self.status_label.setText("Channels combined successfully")
             self.download_button.setEnabled(True)
+
+            # Update the image preview in the image_label
+            pixmap = QPixmap(self.finished_file_path)
+            if pixmap.isNull():
+                QMessageBox.warning(self, "Error", "Unable to load the processed image for preview.")
+            else:
+                self.image_label.setPixmap(pixmap)
+                self.image_label.show()  # Ensure the image label is visible
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
 
