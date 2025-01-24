@@ -7,6 +7,7 @@ import string
 # Note that all files, by default, are in the same folder as the code being executed
 
 from magic import magic
+from lsb import putTextIntoLSB, getTextFromLSB
 
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
@@ -20,7 +21,7 @@ def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	newFileName: The path to the modified image.
 	'''
 
-	newFileName = '/dev/null'
+	newFileName = putTextIntoLSB(fileName, text, bitDepth)
 
 	return newFileName
 
@@ -55,7 +56,8 @@ def getTextFromLSB(fileName: string, bitDepth: int=1):
 	extractedText: The text extracted from the image.
 	'''
 
-	extractedText = ''
+
+	extractedText  = getTextFromLSB(fileName, bitDepth)
 
 	return extractedText
 
