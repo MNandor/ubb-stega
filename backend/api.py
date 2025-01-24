@@ -8,7 +8,7 @@ import string
 
 from magic import magic
 from lsb import putTextIntoLSB, getTheTextFromLSB 
-from colorChannels import combineColorChannels
+from colorChannels import combineColorChannels, separateChannels
 
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
@@ -94,11 +94,9 @@ def separateColorChannels(rgbImagePath: string):
 	blueImagePath: The path to the blue channel image.
 	'''
 
-	redImagePath = '/dev/null'
-	greenImagePath = '/dev/null'
-	blueImagePath = '/dev/null'
+	red, green, blue = separateChannels(rgbImagePath)
 
-	return redImagePath, greenImagePath, blueImagePath
+	return red, green, blue
 
 
 

@@ -67,5 +67,45 @@ def combineColorChannels(redImagePath: string, greenImagePath: string, blueImage
 
 	return resultFile
 
+def separateChannels(mixedFileName, outputFiles = ("resRed.png", "resGreen.png", "resBlue.png")):
+
+	with open(mixedFileName, 'rb') as ifs:
+
+		mpng = png.Reader(file=ifs).read()
+
+
+		w, h = mpng[:2] # we're assuming they're the same size
+
+		rdata = []
+		gdata = []
+		bdata = []
+
+		bits = list(mpng[2])
+
+
+		for y in range(h):
+			rrow = []
+			grow = []
+			brow = []
+			for x in range(w):
+
+				rrow += [bits[y][3*x]]
+				grow += [bits[y][3*x+1]]
+				brow += [bits[y][3*x+2]]
+
+			rdata += [rrow]
+			gdata += [grow]
+			bdata += [brow]
+
+
+		for fileName, data in zip(outputFiles, [rdata, gdata, bdata]):
+			with open(fileName, "wb") as ofs:
+				# output is definitely 3 channels
+				writer = png.Writer(w,h, greyscale=True, alpha=False)
+				writer.write(ofs, data)
+
+
+	return outputFiles
 if __name__ == "__main__":
-	combineColorChannels("input-placeholder.png", "output-placeholder.png", "output-placeholder.png")
+	combineColorChannels("ex1.png", "ex2.png", "ex3.png")
+	separateChannels('res.png')
