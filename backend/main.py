@@ -23,64 +23,98 @@ class LSBTab(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
-        # Application description
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
         description_label = QLabel("""
         <h2>LSB Text Hider</h2>
         <p>Hide your secret messages in image files using the Least Significant Bit (LSB) technique.<br>
         Select an image, type your message, and save the modified image securely!</p>
         """)
         description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
 
         # Message input
         self.message_field = QLineEdit()
         self.message_field.setPlaceholderText("Enter message to hide")
         self.message_field.setToolTip("Type the secret message you want to embed into the image")
+        self.message_field.setFixedSize(400, 40)  # Adjusted size for a larger and wider input field
+        self.message_field.setStyleSheet("padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px;")
 
         # File selection button
         self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
         self.file_button.setToolTip("Click to choose an image file to hide the message")
+        self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
 
         # Process button
         self.start_button = QPushButton("Hide Message")
         self.start_button.setFixedSize(200, 30)
         self.start_button.setToolTip("Start the process of embedding the message into the selected image")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_hiding_process)
 
         # Download button
         self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
         self.download_button.setToolTip("Save the modified image with the hidden message")
+        self.download_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
+
+        # Image box with centered layout
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white;")
+        self.image_box.setFixedSize(550, 450)  # Adjusted size for a larger box
+
+        # Centering layout for the image inside the box
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)  # Ensure the image is centered both vertically and horizontally
 
         # Image preview label
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setScaledContents(True)
-        self.image_label.setFixedSize(400, 300)  # Adjust the size as needed
+        self.image_label.setFixedSize(480, 380)  # Slightly smaller than the box
         self.image_label.hide()
+
+        # Add the image_label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
 
         # Status label
         self.status_label = QLabel("Select a file and enter message")
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Add widgets to layout
-        layout.addWidget(description_label)
-        layout.addWidget(self.message_field)
-        layout.addSpacing(5)  # Reduced spacing here
-        layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(5)  # Reduced spacing here
-        layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(5)  # Reduced spacing here
-        layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
-        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Center the image
-        layout.addWidget(self.status_label)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.message_field, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
 
-        # Set the overall layout
-        layout.setSpacing(8)  # Set general spacing between all widgets
+        # Set the scroll area's widget to the scroll content
+        scroll_content.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        layout.addWidget(scroll_area)
         self.setLayout(layout)
 
         # Set overall style
@@ -89,6 +123,8 @@ class LSBTab(QWidget):
                 font-family: Arial, sans-serif;
                 font-size: 14px;
                 padding: 10px;
+                background-color: white;
+                color: black;
             }
             QLineEdit {
                 padding: 5px;
@@ -109,12 +145,18 @@ class LSBTab(QWidget):
             QPushButton:hover {
                 background-color: #0056b3;
             }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
         """)
 
         # Internal attributes
         self.file_path = None
         self.finished_file_path = None
-
 
     def select_file(self):
         options = QFileDialog.Options()
@@ -276,7 +318,8 @@ class MagicTab(QWidget):
         """)
         description_label.setWordWrap(True)
         description_label.setAlignment(Qt.AlignCenter)
-        description_label.setStyleSheet("font-weight: bold;")
+        description_label.setStyleSheet(
+            "font-weight: bold; background: transparent; border: none;")  # No border or background
 
         # File selection buttons
         self.image1_button = QPushButton("Select First Image")
@@ -333,7 +376,7 @@ class MagicTab(QWidget):
         # Status label
         self.status_label = QLabel("Select two images to combine")
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
         # Add widgets to the scroll layout
         scroll_layout.addWidget(description_label)
@@ -468,47 +511,65 @@ class ExtractLSBTab(QWidget):
         Select an image, specify the bit depth, and uncover the hidden text!</p>
         """)
         description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold; background: transparent; border: none;")
 
         # File selection button
         self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
         self.file_button.setToolTip("Click to choose an image file for extracting hidden text")
+        self.file_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.file_button.clicked.connect(self.select_file)
 
         # Bit depth input
         self.bit_depth_field = QLineEdit()
         self.bit_depth_field.setPlaceholderText("Enter bit depth (default is 1)")
         self.bit_depth_field.setToolTip("Specify the number of Least Significant Bits used for embedding the text")
+        self.bit_depth_field.setFixedSize(300, 40)  # Larger input box for better visibility
+        self.bit_depth_field.setStyleSheet(
+            "padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px;")
 
         # Process button
         self.start_button = QPushButton("Extract Hidden Text")
         self.start_button.setFixedSize(200, 30)
         self.start_button.setToolTip("Start extracting hidden text from the selected image")
+        self.start_button.setStyleSheet("padding: 8px; font-size: 14px;")
         self.start_button.clicked.connect(self.start_extraction)
+
+        # Box for results
+        self.result_box = QFrame()
+        self.result_box.setFrameStyle(QFrame.Box)
+        self.result_box.setLineWidth(2)
+        self.result_box.setStyleSheet("background-color: #f9f9f9; border: 1px solid #ccc; padding: 10px;")
+        self.result_box.setFixedSize(550, 150)
+
+        # Result display inside the box
+        result_layout = QVBoxLayout(self.result_box)
+        self.result_label = QLabel("")
+        self.result_label.setWordWrap(True)
+        self.result_label.setAlignment(Qt.AlignCenter)
+        self.result_label.setStyleSheet("font-size: 14px; color: #333;")
+        result_layout.addWidget(self.result_label)
 
         # Status label
         self.status_label = QLabel("Select an image file to extract hidden text.")
         self.status_label.setAlignment(Qt.AlignCenter)
-        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
+        self.status_label.setStyleSheet("font-weight: bold; color: #333; border: none; background: transparent;")
 
-        # Result display
-        self.result_label = QLabel("")
-        self.result_label.setWordWrap(True)
-        self.result_label.setAlignment(Qt.AlignCenter)
-        self.result_label.setStyleSheet("border: 1px solid #ccc; padding: 10px; border-radius: 5px; background-color: #f9f9f9;")
-
-        # Add widgets to layout
+        # Add widgets to the main layout
         layout.addWidget(description_label)
         layout.addSpacing(10)
         layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(5)
+        layout.addSpacing(10)
         layout.addWidget(self.bit_depth_field, alignment=Qt.AlignCenter)
-        layout.addSpacing(5)
+        layout.addSpacing(10)
         layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
         layout.addSpacing(10)
-        layout.addWidget(self.status_label)
+        layout.addWidget(self.result_box, alignment=Qt.AlignCenter)
         layout.addSpacing(10)
-        layout.addWidget(self.result_label)
+        layout.addWidget(self.status_label)
+
+        # Set the main layout
         self.setLayout(layout)
 
         # Set overall style
@@ -517,6 +578,8 @@ class ExtractLSBTab(QWidget):
                 font-family: Arial, sans-serif;
                 font-size: 14px;
                 padding: 10px;
+                background-color: white;
+                color: black;
             }
             QLineEdit {
                 padding: 5px;
@@ -536,6 +599,13 @@ class ExtractLSBTab(QWidget):
             }
             QPushButton:hover {
                 background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
             }
         """)
 
