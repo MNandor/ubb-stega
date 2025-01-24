@@ -1,14 +1,13 @@
 import sys
 import os
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
-from PyQt5 import Qt
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QTabWidget, QPushButton, QLabel, QFileDialog,
                             QMessageBox, QLineEdit)
-from backend.api import (
+from api import (
     hideTextInLSB,
     mixTwoImagesMagic,
     getTextFromLSB,
@@ -17,6 +16,7 @@ from backend.api import (
     hideTextByMakingImageLarger,
     getTextFromLargeImage
 )
+
 
 class LSBTab(QWidget):
     def __init__(self):
@@ -55,6 +55,13 @@ class LSBTab(QWidget):
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(400, 300)  # Adjust the size as needed
+        self.image_label.hide()
+
         # Status label
         self.status_label = QLabel("Select a file and enter message")
         self.status_label.setAlignment(Qt.AlignCenter)
@@ -63,12 +70,17 @@ class LSBTab(QWidget):
         # Add widgets to layout
         layout.addWidget(description_label)
         layout.addWidget(self.message_field)
-        layout.addSpacing(10)
+        layout.addSpacing(5)  # Reduced spacing here
         layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(5)  # Reduced spacing here
         layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(5)  # Reduced spacing here
         layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
-        layout.addSpacing(10)
+        layout.addWidget(self.image_label, alignment=Qt.AlignCenter)  # Center the image
         layout.addWidget(self.status_label)
+
+        # Set the overall layout
+        layout.setSpacing(8)  # Set general spacing between all widgets
         self.setLayout(layout)
 
         # Set overall style
@@ -103,10 +115,11 @@ class LSBTab(QWidget):
         self.file_path = None
         self.finished_file_path = None
 
+
     def select_file(self):
         options = QFileDialog.Options()
         file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "",
-                                                 "Images (*.png *.jpg)", options=options)
+                                                   "Images (*.png *.jpg)", options=options)
         if file_path:
             self.file_path = file_path
             self.status_label.setText(f"Selected: {file_path}")
@@ -117,8 +130,18 @@ class LSBTab(QWidget):
             return
 
         try:
-            self.finished_file_path = hideTextInLSB(self.file_path,
-                                                   self.message_field.text())
+            # Generate the output image with hidden text
+            self.finished_file_path = "res.png"
+            hideTextInLSB(self.file_path, self.message_field.text())  # Ensure the function saves to "res.png"
+
+            # Display the processed image
+            pixmap = QPixmap(self.finished_file_path)
+            if pixmap.isNull():
+                print("Error: Unable to load the processed image.")
+            else:
+                self.image_label.setPixmap(pixmap)
+                self.image_label.show()
+
             self.status_label.setText("Process completed. You can now download the result.")
             self.download_button.setEnabled(True)
         except Exception as e:
@@ -130,7 +153,22 @@ class LSBTab(QWidget):
             return
 
         save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "",
-                                                 "Images (*.png *.jpg)")
+                                                   "Images (*.png *.jpg)")
+        if save_path:
+            try:
+                os.replace(self.finished_file_path, save_path)
+                self.status_label.setText(f"Saved to: {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", str(e))
+
+
+    def download_file(self):
+        if not self.finished_file_path:
+            QMessageBox.warning(self, "Error", "No processed file available")
+            return
+
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "",
+                                                   "Images (*.png *.jpg)")
         if save_path:
             try:
                 os.replace(self.finished_file_path, save_path)
@@ -569,14 +607,14 @@ class ExtractTextFromLargeImageTab(QWidget):
             QMessageBox.critical(self, "Error", str(e))
 
 
-
-
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Image Steganography Tool")
-        self.setGeometry(100, 100, 800, 600)
+
+        # Set the window size to match the one in the image
+        self.resize(800, 700)  # Adjust width and height as needed
+        self.setMinimumSize(800, 700)  # Optionally set a minimum size to prevent resizing smaller than this
 
         # Create tab widget
         tabs = QTabWidget()
@@ -589,6 +627,10 @@ class MainWindow(QMainWindow):
         tabs.addTab(ExtractTextFromLargeImageTab(), "Extract Text from Large Image")
 
         self.setCentralWidget(tabs)
+
+        # Optionally make the app start maximized
+        # self.showMaximized()  # Uncomment if needed
+
 
 
 def main():
