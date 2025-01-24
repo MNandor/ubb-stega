@@ -5,8 +5,8 @@ import os
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                            QTabWidget, QPushButton, QLabel, QFileDialog,
-                            QMessageBox, QLineEdit)
+                             QTabWidget, QPushButton, QLabel, QFileDialog,
+                             QMessageBox, QLineEdit, QHBoxLayout, QFrame, QScrollArea)
 from api import (
     hideTextInLSB,
     mixTwoImagesMagic,
@@ -261,12 +261,30 @@ class MagicTab(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
+        # Main scrollable area setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+
+        # Description label
+        description_label = QLabel("""
+        <h2>Magic Combination</h2>
+        <p>Combine two images to create a magical result!<br>
+        One image appears on light backgrounds, and the other on dark backgrounds.<br>
+        Select two images, and let the magic happen!</p>
+        """)
+        description_label.setWordWrap(True)
+        description_label.setAlignment(Qt.AlignCenter)
+        description_label.setStyleSheet("font-weight: bold;")
+
         # File selection buttons
         self.image1_button = QPushButton("Select First Image")
         self.image2_button = QPushButton("Select Second Image")
 
         for btn in [self.image1_button, self.image2_button]:
             btn.setFixedSize(200, 30)
+            btn.setToolTip("Click to select an image file")
 
         self.image1_button.clicked.connect(lambda: self.select_file(1))
         self.image2_button.clicked.connect(lambda: self.select_file(2))
@@ -274,31 +292,119 @@ class MagicTab(QWidget):
         # Process button
         self.start_button = QPushButton("Combine Images")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Combine the two selected images")
         self.start_button.clicked.connect(self.start_magic_process)
 
         # Download button
         self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
+        self.download_button.setToolTip("Save the combined image to your computer")
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
+        # Image box with centered layout
+        self.image_box = QFrame()
+        self.image_box.setFrameStyle(QFrame.Box)
+        self.image_box.setLineWidth(2)
+        self.image_box.setStyleSheet("background-color: white;")
+        self.image_box.setFixedSize(550, 450)  # Adjusted size for a larger box
+
+        # Centering layout for the image inside the box
+        image_box_layout = QVBoxLayout(self.image_box)
+        image_box_layout.setAlignment(Qt.AlignCenter)  # Ensure the image is centered both vertically and horizontally
+
+        # Image preview label
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        self.image_label.setScaledContents(True)
+        self.image_label.setFixedSize(480, 380)  # Slightly smaller than the box
+        self.image_label.hide()
+
+        # Add the image_label to the box's layout
+        image_box_layout.addWidget(self.image_label, alignment=Qt.AlignCenter)
+
+        # Toggle background button
+        self.toggle_background_button = QPushButton("Toggle Box Background")
+        self.toggle_background_button.setFixedSize(200, 30)
+        self.toggle_background_button.setToolTip("Toggle the box background color between white and black")
+        self.toggle_background_button.clicked.connect(self.toggle_box_background)
+        self.toggle_background_button.hide()
+
         # Status label
         self.status_label = QLabel("Select two images to combine")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
 
-        # Add widgets to layout
-        for widget in [self.image1_button, self.image2_button,
-                      self.start_button, self.download_button, self.status_label]:
-            layout.addWidget(widget)
+        # Add widgets to the scroll layout
+        scroll_layout.addWidget(description_label)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image1_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.image2_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.image_box, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(5)
+        scroll_layout.addWidget(self.toggle_background_button, alignment=Qt.AlignCenter)
+        scroll_layout.addSpacing(10)
+        scroll_layout.addWidget(self.status_label)
+
+        # Set the scroll area's widget to the scroll content
+        scroll_area.setWidget(scroll_content)
+
+        # Add the scroll area to the main layout
+        layout.addWidget(scroll_area)
         self.setLayout(layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+                background-color: white;
+                color: black;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+            QLabel {
+                margin: 5px 0;
+            }
+            QFrame {
+                border: 2px solid #ccc;
+                border-radius: 5px;
+            }
+        """)
 
         # Internal attributes
         self.images = {1: None, 2: None}
         self.finished_file_path = None
+        self.current_box_background = "white"  # Default background for the box
 
     def select_file(self, image_num):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, f"Select Image {image_num}", 
-                                                 "", "Images (*.png *.jpg)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, f"Select Image {image_num}",
+                                                   "", "Images (*.png *.jpg)", options=options)
         if file_path:
             self.images[image_num] = file_path
             self.status_label.setText(f"Selected image {image_num}: {file_path}")
@@ -313,24 +419,42 @@ class MagicTab(QWidget):
                 self.images[1],
                 self.images[2]
             )
-            self.status_label.setText("Images combined successfully")
+            self.status_label.setText("Images combined successfully!")
             self.download_button.setEnabled(True)
+
+            # Display the combined image
+            pixmap = QPixmap(self.finished_file_path)
+            if pixmap.isNull():
+                print("Error: Unable to load the processed image.")
+            else:
+                self.image_label.setPixmap(pixmap)
+                self.image_label.show()
+                self.toggle_background_button.show()
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
+    def toggle_box_background(self):
+        if self.current_box_background == "white":
+            self.image_box.setStyleSheet("background-color: black;")
+            self.current_box_background = "black"
+        else:
+            self.image_box.setStyleSheet("background-color: white;")
+            self.current_box_background = "white"
 
     def download_file(self):
         if not self.finished_file_path:
             QMessageBox.warning(self, "Error", "No processed file available")
             return
 
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "", 
-                                                 "Images (*.png *.jpg)")
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "",
+                                                   "Images (*.png *.jpg)")
         if save_path:
             try:
                 os.replace(self.finished_file_path, save_path)
                 self.status_label.setText(f"Saved to: {save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
+
 
 class ExtractLSBTab(QWidget):
     def __init__(self):
@@ -664,8 +788,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Image Steganography Tool")
 
         # Set the window size to match the one in the image
-        self.resize(800, 700)  # Adjust width and height as needed
-        self.setMinimumSize(800, 700)  # Optionally set a minimum size to prevent resizing smaller than this
+        self.resize(900, 700)  # Adjust width and height as needed
+        self.setMinimumSize(900, 700)  # Optionally set a minimum size to prevent resizing smaller than this
 
         # Create tab widget
         tabs = QTabWidget()
