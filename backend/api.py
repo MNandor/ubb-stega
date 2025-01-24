@@ -6,6 +6,8 @@ import string
 # Call these functions from the frontend
 # Note that all files, by default, are in the same folder as the code being executed
 
+from magic import magic
+
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
 	Given an image and text, hide the text in the Least Significant Bits and save it as another image.
@@ -35,8 +37,8 @@ def mixTwoImagesMagic(image1Path: string, image2Path: string):
 	Returns:
 	newImagePath: The path to the new image with the two images mixed.
 	'''
-
-	newImagePath = '/dev/null'
+	
+	newImagePath = magic(image1Path, image2Path)
 
 	return newImagePath
 
