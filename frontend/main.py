@@ -1,5 +1,10 @@
-import os
 import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
+from PyQt5 import Qt
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                             QTabWidget, QPushButton, QLabel, QFileDialog,
                             QMessageBox, QLineEdit)
@@ -18,36 +23,81 @@ class LSBTab(QWidget):
         super().__init__()
         layout = QVBoxLayout()
 
+        # Application description
+        description_label = QLabel("""
+        <h2>LSB Text Hider</h2>
+        <p>Hide your secret messages in image files using the Least Significant Bit (LSB) technique.<br>
+        Select an image, type your message, and save the modified image securely!</p>
+        """)
+        description_label.setWordWrap(True)
+
         # Message input
         self.message_field = QLineEdit()
         self.message_field.setPlaceholderText("Enter message to hide")
+        self.message_field.setToolTip("Type the secret message you want to embed into the image")
 
         # File selection button
         self.file_button = QPushButton("Select Image File")
         self.file_button.setFixedSize(200, 30)
+        self.file_button.setToolTip("Click to choose an image file to hide the message")
         self.file_button.clicked.connect(self.select_file)
 
         # Process button
         self.start_button = QPushButton("Hide Message")
         self.start_button.setFixedSize(200, 30)
+        self.start_button.setToolTip("Start the process of embedding the message into the selected image")
         self.start_button.clicked.connect(self.start_hiding_process)
 
         # Download button
         self.download_button = QPushButton("Download Result")
         self.download_button.setFixedSize(200, 30)
+        self.download_button.setToolTip("Save the modified image with the hidden message")
         self.download_button.clicked.connect(self.download_file)
         self.download_button.setEnabled(False)
 
         # Status label
         self.status_label = QLabel("Select a file and enter message")
+        self.status_label.setAlignment(Qt.AlignCenter)
+        self.status_label.setStyleSheet("font-weight: bold; color: #333;")
 
         # Add widgets to layout
+        layout.addWidget(description_label)
         layout.addWidget(self.message_field)
-        layout.addWidget(self.file_button)
-        layout.addWidget(self.start_button)
-        layout.addWidget(self.download_button)
+        layout.addSpacing(10)
+        layout.addWidget(self.file_button, alignment=Qt.AlignCenter)
+        layout.addWidget(self.start_button, alignment=Qt.AlignCenter)
+        layout.addWidget(self.download_button, alignment=Qt.AlignCenter)
+        layout.addSpacing(10)
         layout.addWidget(self.status_label)
         self.setLayout(layout)
+
+        # Set overall style
+        self.setStyleSheet("""
+            QWidget {
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                padding: 10px;
+            }
+            QLineEdit {
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+            }
+            QPushButton {
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                padding: 5px 10px;
+            }
+            QPushButton:disabled {
+                background-color: #ddd;
+                color: #666;
+            }
+            QPushButton:hover {
+                background-color: #0056b3;
+            }
+        """)
 
         # Internal attributes
         self.file_path = None
@@ -55,7 +105,7 @@ class LSBTab(QWidget):
 
     def select_file(self):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "", 
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Image", "",
                                                  "Images (*.png *.jpg)", options=options)
         if file_path:
             self.file_path = file_path
@@ -63,13 +113,13 @@ class LSBTab(QWidget):
 
     def start_hiding_process(self):
         if not self.file_path or not self.message_field.text():
-            QMessageBox.warning(self, "Error", "Please provide image and message")
+            QMessageBox.warning(self, "Error", "Please provide an image and message")
             return
 
         try:
-            self.finished_file_path = hideTextInLSB(self.file_path, 
+            self.finished_file_path = hideTextInLSB(self.file_path,
                                                    self.message_field.text())
-            self.status_label.setText("Process completed")
+            self.status_label.setText("Process completed. You can now download the result.")
             self.download_button.setEnabled(True)
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
@@ -79,7 +129,7 @@ class LSBTab(QWidget):
             QMessageBox.warning(self, "Error", "No processed file available")
             return
 
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "", 
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Result", "",
                                                  "Images (*.png *.jpg)")
         if save_path:
             try:
@@ -87,6 +137,7 @@ class LSBTab(QWidget):
                 self.status_label.setText(f"Saved to: {save_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", str(e))
+
 
 class RGBTab(QWidget):
     def __init__(self):
