@@ -7,7 +7,8 @@ import string
 # Note that all files, by default, are in the same folder as the code being executed
 
 from magic import magic
-from lsb import putTextIntoLSB, getTheTextFromLSB
+from lsb import putTextIntoLSB, getTheTextFromLSB 
+from colorChannels import combineColorChannels
 
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
@@ -75,7 +76,7 @@ def mixColorChannels(redImagePath: string, greenImagePath: string, blueImagePath
 	rgbImagePath: The path to the new RGB image.
 	'''
 
-	rgbImagePath = '/dev/null'
+	rgbImagePath = combineColorChannels(redImagePath, greenImagePath, blueImagePath)
 
 	return rgbImagePath
 
