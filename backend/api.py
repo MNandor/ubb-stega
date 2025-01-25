@@ -9,6 +9,7 @@ import string
 from magic import magic
 from lsb import putTextIntoLSB, getTheTextFromLSB 
 from colorChannels import combineColorChannels, separateChannels
+from enlargen import getTheTextFromEnlarged, hideTextByEnlarging
 
 def hideTextInLSB(fileName: string, text: string, bitDepth: int=1):
 	'''
@@ -112,7 +113,7 @@ def hideTextByMakingImageLarger(fileName: string, text: string):
 	newFileName: The path to the modified image.
 	'''
 
-	newFileName = '/dev/null'
+	newFileName = hideTextByEnlarging(fileName, text)
 
 	return newFileName
 
@@ -127,7 +128,6 @@ def getTextFromLargeImage(fileName: string):
 	Returns:
 	extractedText: The text extracted from the image.
 	'''
-
-	extractedText = ''
+	extractedText = getTheTextFromEnlarged(fileName)
 
 	return extractedText

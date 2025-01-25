@@ -30,8 +30,6 @@ def hideTextByEnlarging(inputFile: string, text: string, resultFile: string = 'r
 		return tl+tr, bl+br
 
 
-		uprow += [tl, tr]
-		downrow += [bl, br]
 
 
 
@@ -58,7 +56,7 @@ def hideTextByEnlarging(inputFile: string, text: string, resultFile: string = 'r
 				chars = [next(gen) for _ in range(rchannels)]
 
 
-				print(x, list(block), chars)
+# 				print(x, list(block), chars)
 				# input()
 
 				top, bottom = processBlock(block, chars, rchannels)
@@ -87,8 +85,50 @@ def hideTextByEnlarging(inputFile: string, text: string, resultFile: string = 'r
 
 	return resultFile
 
-def separateChannels(mixedFileName, outputFiles = ("resRed.png", "resGreen.png", "resBlue.png")):
-	pass
+def getTheTextFromEnlarged(fileName):
+	with open(fileName, 'rb') as ifs:
+		thePNG = png.Reader(file=ifs).read()
+		
+		h = thePNG[1]
+		w = thePNG[0]
+		planes = thePNG[3]["planes"]
+		imgBits = list(thePNG[2]) # list of rows. Each row is 3x width if 3 color channels. 4 with alpha. 1 if grayscale
+
+
+		res = ""		
+		for y in range(0, h, 2):
+			for x in range(0, w, 2):
+				topBlock = imgBits[y][x*planes:(x+2)*planes]
+				botBlock = imgBits[y+1][x*planes:(x+2)*planes]
+
+				tl = topBlock[:planes]
+				tr = topBlock[planes:]
+				bl = botBlock[:planes]
+				br = botBlock[planes:]
+
+
+				mask = 7
+				for i in range(planes):
+					ch = 0
+					ch += tr[i] & mask
+					ch += (((bl[i]) & mask)<<3)
+					ch += (((br[i]) & mask)<<6)
+
+					if ch == 0:
+						return res
+
+					res += chr(ch)
+	return res
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
 	hideTextByEnlarging('ex1.png', "Hello world")
+	getTheTextFromEnlarged('res.png')
+
+
